@@ -1,9 +1,8 @@
-import Books from "@/components/books";
-
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Books from "@/components/books";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -16,14 +15,24 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  const { data: books, error } = await supabase
+  const { data: activeBooks, error: activeError } = await supabase
     .from("books")
-    .select("id, title, author, category, rank, status")
+    .select("id, title, author, category, rank, status, completed_at")
     .eq("status", "ACTIVE")
     .order("rank", { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
+  const { data: completedBooks, error: completedError } = await supabase
+    .from("books")
+    .select("id, title, author, category, rank, status, completed_at")
+    .eq("status", "COMPLETED")
+    .order("completed_at", { ascending: false });
+
+  if (activeError) {
+    throw new Error(activeError.message);
+  }
+
+  if (completedError) {
+    throw new Error(completedError.message);
   }
 
   return (
@@ -39,8 +48,11 @@ export default async function HomePage() {
           </p>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          <Books books={books ?? []} />
+        <CardContent className="space-y-6">
+          <Books
+            activeBooks={activeBooks ?? []}
+            completedBooks={completedBooks ?? []}
+          />
         </CardContent>
       </Card>
     </main>
