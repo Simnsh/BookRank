@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrashIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Book = {
   id: string;
@@ -34,14 +42,131 @@ type BooksProps = {
   completedBooks: Book[];
 };
 
+type SortableBookItemProps = {
+  book: Book;
+  onComplete: (bookId: string, checked: boolean) => void;
+};
+
+function SortableBookItem({ book, onComplete }: SortableBookItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: book.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-md border p-3 bg-background ${
+        isDragging ? "shadow-md opacity-80" : ""
+      }`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="text-sm font-semibold w-8 text-center cursor-grab active:cursor-grabbing"
+        title="Drag to reorder"
+      >
+        {book.rank}
+      </div>
+
+      <div className="flex-1">
+        <div className="font-medium">{book.title}</div>
+        <div className="text-sm text-muted-foreground">{book.author}</div>
+        {book.category && (
+          <Badge variant="secondary" className="mt-1">
+            {book.category}
+          </Badge>
+        )}
+      </div>
+
+      <Checkbox
+        checked={false}
+        onCheckedChange={() => onComplete(book.id, true)}
+      />
+    </div>
+  );
+}
+
 export default function Books({ activeBooks, completedBooks }: BooksProps) {
   const router = useRouter();
   const supabase = createClient();
 
+  const [localActiveBooks, setLocalActiveBooks] = useState<Book[]>(activeBooks);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [category, setCategory] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setLocalActiveBooks(activeBooks);
+  }, [activeBooks]);
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = localActiveBooks.findIndex((book) => book.id === active.id);
+    const newIndex = localActiveBooks.findIndex((book) => book.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    const previousBooks = localActiveBooks;
+    const reorderedBooks = arrayMove(localActiveBooks, oldIndex, newIndex).map(
+      (book, index) => ({
+        ...book,
+        rank: index + 1,
+      }),
+    );
+
+    setLocalActiveBooks(reorderedBooks);
+
+    // Step 1: move all active ranks temporarily out of the way
+    for (let i = 0; i < reorderedBooks.length; i++) {
+      const book = reorderedBooks[i];
+      const { error } = await supabase
+        .from("books")
+        .update({ rank: 1000 + i })
+        .eq("id", book.id);
+
+      if (error) {
+        setLocalActiveBooks(previousBooks);
+        alert(error.message);
+        return;
+      }
+    }
+
+    // Step 2: assign final ranks 1..n
+    for (let i = 0; i < reorderedBooks.length; i++) {
+      const book = reorderedBooks[i];
+      const { error } = await supabase
+        .from("books")
+        .update({ rank: i + 1 })
+        .eq("id", book.id);
+
+      if (error) {
+        setLocalActiveBooks(previousBooks);
+        alert(error.message);
+        return;
+      }
+    }
+
+    router.refresh();
+  }
 
   async function handleAddBook(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,9 +181,9 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
     }
 
     const nextRank =
-      activeBooks.length === 0
+      localActiveBooks.length === 0
         ? 1
-        : Math.max(...activeBooks.map((b) => b.rank)) + 1;
+        : Math.max(...localActiveBooks.map((b) => b.rank)) + 1;
 
     const {
       data: { user },
@@ -93,7 +218,7 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
 
   async function handleComplete(bookId: string, checked: boolean) {
     if (checked) {
-      const bookToComplete = activeBooks.find((book) => book.id === bookId);
+      const bookToComplete = localActiveBooks.find((book) => book.id === bookId);
 
       if (!bookToComplete) {
         alert("Book not found.");
@@ -115,7 +240,7 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
         return;
       }
 
-      const booksToShift = activeBooks.filter(
+      const booksToShift = localActiveBooks.filter(
         (book) => book.rank > completedRank,
       );
 
@@ -132,9 +257,9 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
       }
     } else {
       const restoredRank =
-        activeBooks.length === 0
+        localActiveBooks.length === 0
           ? 1
-          : Math.max(...activeBooks.map((b) => b.rank)) + 1;
+          : Math.max(...localActiveBooks.map((b) => b.rank)) + 1;
 
       const { error } = await supabase
         .from("books")
@@ -155,13 +280,13 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
   }
 
   async function handleMoveUp(bookId: string) {
-    const currentBook = activeBooks.find((book) => book.id === bookId);
+    const currentBook = localActiveBooks.find((book) => book.id === bookId);
 
     if (!currentBook || currentBook.rank === 1) {
       return;
     }
 
-    const previousBook = activeBooks.find(
+    const previousBook = localActiveBooks.find(
       (book) => book.rank === currentBook.rank - 1,
     );
 
@@ -203,13 +328,13 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
   }
 
   async function handleMoveDown(bookId: string) {
-    const currentBook = activeBooks.find((book) => book.id === bookId);
+    const currentBook = localActiveBooks.find((book) => book.id === bookId);
 
-    if (!currentBook || currentBook.rank === activeBooks.length) {
+    if (!currentBook || currentBook.rank === localActiveBooks.length) {
       return;
     }
 
-    const nextBook = activeBooks.find(
+    const nextBook = localActiveBooks.find(
       (book) => book.rank === currentBook.rank + 1,
     );
 
@@ -272,60 +397,30 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
   return (
     <>
       <div className="space-y-4">
-        {activeBooks.length === 0 ? (
+        {localActiveBooks.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No active books yet. Add your first book.
           </p>
         ) : (
-          activeBooks.map((book) => (
-            <div
-              key={book.id}
-              className="flex items-center gap-3 rounded-md border p-3"
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={localActiveBooks.map((book) => book.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <div className="text-sm font-semibold w-8 text-center">
-                {book.rank}
+              <div className="space-y-4">
+                {localActiveBooks.map((book) => (
+                  <SortableBookItem
+                    key={book.id}
+                    book={book}
+                    onComplete={handleComplete}
+                  />
+                ))}
               </div>
-
-              <div className="flex-1">
-                <div className="font-medium">{book.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {book.author}
-                </div>
-                {book.category && (
-                  <Badge variant="secondary" className="mt-1">
-                    {book.category}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleMoveUp(book.id)}
-                  disabled={book.rank === 1}
-                >
-                  ↑
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleMoveDown(book.id)}
-                  disabled={book.rank === activeBooks.length}
-                >
-                  ↓
-                </Button>
-
-                <Checkbox
-                  checked={false}
-                  onCheckedChange={() => handleComplete(book.id, true)}
-                />
-              </div>
-            </div>
-          ))
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
