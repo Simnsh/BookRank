@@ -118,7 +118,9 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
       return;
     }
 
-    const oldIndex = localActiveBooks.findIndex((book) => book.id === active.id);
+    const oldIndex = localActiveBooks.findIndex(
+      (book) => book.id === active.id,
+    );
     const newIndex = localActiveBooks.findIndex((book) => book.id === over.id);
 
     if (oldIndex === -1 || newIndex === -1) {
@@ -218,7 +220,9 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
 
   async function handleComplete(bookId: string, checked: boolean) {
     if (checked) {
-      const bookToComplete = localActiveBooks.find((book) => book.id === bookId);
+      const bookToComplete = localActiveBooks.find(
+        (book) => book.id === bookId,
+      );
 
       if (!bookToComplete) {
         alert("Book not found.");
@@ -279,101 +283,101 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
     router.refresh();
   }
 
-  async function handleMoveUp(bookId: string) {
-    const currentBook = localActiveBooks.find((book) => book.id === bookId);
+  //   async function handleMoveUp(bookId: string) {
+  //     const currentBook = localActiveBooks.find((book) => book.id === bookId);
 
-    if (!currentBook || currentBook.rank === 1) {
-      return;
-    }
+  //     if (!currentBook || currentBook.rank === 1) {
+  //       return;
+  //     }
 
-    const previousBook = localActiveBooks.find(
-      (book) => book.rank === currentBook.rank - 1,
-    );
+  //     const previousBook = localActiveBooks.find(
+  //       (book) => book.rank === currentBook.rank - 1,
+  //     );
 
-    if (!previousBook) {
-      return;
-    }
+  //     if (!previousBook) {
+  //       return;
+  //     }
 
-    const { error: error1 } = await supabase
-      .from("books")
-      .update({ rank: -1 })
-      .eq("id", currentBook.id);
+  //     const { error: error1 } = await supabase
+  //       .from("books")
+  //       .update({ rank: -1 })
+  //       .eq("id", currentBook.id);
 
-    if (error1) {
-      alert(error1.message);
-      return;
-    }
+  //     if (error1) {
+  //       alert(error1.message);
+  //       return;
+  //     }
 
-    const { error: error2 } = await supabase
-      .from("books")
-      .update({ rank: currentBook.rank })
-      .eq("id", previousBook.id);
+  //     const { error: error2 } = await supabase
+  //       .from("books")
+  //       .update({ rank: currentBook.rank })
+  //       .eq("id", previousBook.id);
 
-    if (error2) {
-      alert(error2.message);
-      return;
-    }
+  //     if (error2) {
+  //       alert(error2.message);
+  //       return;
+  //     }
 
-    const { error: error3 } = await supabase
-      .from("books")
-      .update({ rank: currentBook.rank - 1 })
-      .eq("id", currentBook.id);
+  //     const { error: error3 } = await supabase
+  //       .from("books")
+  //       .update({ rank: currentBook.rank - 1 })
+  //       .eq("id", currentBook.id);
 
-    if (error3) {
-      alert(error3.message);
-      return;
-    }
+  //     if (error3) {
+  //       alert(error3.message);
+  //       return;
+  //     }
 
-    router.refresh();
-  }
+  //     router.refresh();
+  //   }
 
-  async function handleMoveDown(bookId: string) {
-    const currentBook = localActiveBooks.find((book) => book.id === bookId);
+  //   async function handleMoveDown(bookId: string) {
+  //     const currentBook = localActiveBooks.find((book) => book.id === bookId);
 
-    if (!currentBook || currentBook.rank === localActiveBooks.length) {
-      return;
-    }
+  //     if (!currentBook || currentBook.rank === localActiveBooks.length) {
+  //       return;
+  //     }
 
-    const nextBook = localActiveBooks.find(
-      (book) => book.rank === currentBook.rank + 1,
-    );
+  //     const nextBook = localActiveBooks.find(
+  //       (book) => book.rank === currentBook.rank + 1,
+  //     );
 
-    if (!nextBook) {
-      return;
-    }
+  //     if (!nextBook) {
+  //       return;
+  //     }
 
-    const { error: error1 } = await supabase
-      .from("books")
-      .update({ rank: -1 })
-      .eq("id", currentBook.id);
+  //     const { error: error1 } = await supabase
+  //       .from("books")
+  //       .update({ rank: -1 })
+  //       .eq("id", currentBook.id);
 
-    if (error1) {
-      alert(error1.message);
-      return;
-    }
+  //     if (error1) {
+  //       alert(error1.message);
+  //       return;
+  //     }
 
-    const { error: error2 } = await supabase
-      .from("books")
-      .update({ rank: currentBook.rank })
-      .eq("id", nextBook.id);
+  //     const { error: error2 } = await supabase
+  //       .from("books")
+  //       .update({ rank: currentBook.rank })
+  //       .eq("id", nextBook.id);
 
-    if (error2) {
-      alert(error2.message);
-      return;
-    }
+  //     if (error2) {
+  //       alert(error2.message);
+  //       return;
+  //     }
 
-    const { error: error3 } = await supabase
-      .from("books")
-      .update({ rank: currentBook.rank + 1 })
-      .eq("id", currentBook.id);
+  //     const { error: error3 } = await supabase
+  //       .from("books")
+  //       .update({ rank: currentBook.rank + 1 })
+  //       .eq("id", currentBook.id);
 
-    if (error3) {
-      alert(error3.message);
-      return;
-    }
+  //     if (error3) {
+  //       alert(error3.message);
+  //       return;
+  //     }
 
-    router.refresh();
-  }
+  //     router.refresh();
+  //   }
 
   async function handleDeleteBook(bookId: string) {
     const confirmed = window.confirm(
@@ -507,6 +511,12 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
                 <div className="text-sm text-muted-foreground">
                   {book.author}
                 </div>
+
+                {book.category && (
+                  <Badge variant="secondary" className="mt-1">
+                    {book.category}
+                  </Badge>
+                )}
 
                 {book.completed_at && (
                   <div className="text-xs text-muted-foreground">
