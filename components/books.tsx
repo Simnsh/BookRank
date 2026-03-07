@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrashIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type Book = {
   id: string;
@@ -291,9 +292,9 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
                   {book.author}
                 </div>
                 {book.category && (
-                  <div className="text-xs text-muted-foreground">
+                  <Badge variant="secondary" className="mt-1">
                     {book.category}
-                  </div>
+                  </Badge>
                 )}
               </div>
 
@@ -407,12 +408,19 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
 
               <div className="flex-1">
                 <div className="font-medium">{book.title}</div>
+
                 <div className="text-sm text-muted-foreground">
                   {book.author}
                 </div>
-                {book.category && (
+
+                {book.completed_at && (
                   <div className="text-xs text-muted-foreground">
-                    {book.category}
+                    Completed{" "}
+                    {new Date(book.completed_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
                 )}
               </div>

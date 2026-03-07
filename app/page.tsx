@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Books from "@/components/books";
+import LogoutButton from "@/components/logout-button";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -40,9 +41,14 @@ export default async function HomePage() {
       <Card className="w-full max-w-lg">
         <CardHeader className="space-y-2">
           <div className="flex items-center justify-between">
-            <CardTitle>BookStack</CardTitle>
-            <Badge variant="secondary">MVP</Badge>
+            <div className="flex items-center gap-2">
+              <CardTitle>BookStack</CardTitle>
+              <Badge variant="secondary">MVP</Badge>
+            </div>
+
+            <LogoutButton />
           </div>
+
           <p className="text-sm text-muted-foreground">
             Rank your books. Finish one at a time.
           </p>
