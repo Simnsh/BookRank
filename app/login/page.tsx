@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
 
   useEffect(() => {
     async function checkUser() {
@@ -34,6 +37,7 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMessage("");
+    setInfoMessage("");
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -47,6 +51,32 @@ export default function LoginPage() {
 
     router.push("/");
     router.refresh();
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setErrorMessage("Enter your email first to receive a reset link.");
+      setInfoMessage("");
+      return;
+    }
+
+    setErrorMessage("");
+    setInfoMessage("");
+    setIsSendingReset(true);
+
+    const redirectTo = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo,
+    });
+
+    setIsSendingReset(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setInfoMessage("Password reset link sent. Check your email.");
   }
 
   return (
@@ -81,13 +111,32 @@ export default function LoginPage() {
               />
             </div>
 
-            {errorMessage ? (
-              <p className="text-sm text-red-500">{errorMessage}</p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={isSendingReset}
+                className="text-sm text-muted-foreground underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
+              >
+                {isSendingReset ? "Sending reset link..." : "Forgot password?"}
+              </button>
+            </div>
+
+            {errorMessage ? <p className="text-sm text-red-500">{errorMessage}</p> : null}
+            {infoMessage ? (
+              <p className="text-sm text-emerald-600">{infoMessage}</p>
             ) : null}
 
             <Button type="submit" className="w-full">
               Log in
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Need an account?{" "}
+              <Link href="/signup" className="underline underline-offset-4">
+                Sign up
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
