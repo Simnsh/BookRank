@@ -1,9 +1,26 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Books from "@/components/books";
 import LogoutButton from "@/components/logout-button";
+import { Button } from "@/components/ui/button";
+
+type Book = {
+  id: string;
+  title: string;
+  author: string;
+  category: string | null;
+  rank: number;
+  status: "ACTIVE" | "COMPLETED";
+  completed_at: string | null;
+};
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -12,28 +29,32 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  let activeBooks: Book[] = [];
+  let completedBooks: Book[] = [];
 
-  const { data: activeBooks, error: activeError } = await supabase
-    .from("books")
-    .select("id, title, author, category, rank, status, completed_at")
-    .eq("status", "ACTIVE")
-    .order("rank", { ascending: true });
+  if (user) {
+    const { data: activeData, error: activeError } = await supabase
+      .from("books")
+      .select("id, title, author, category, rank, status, completed_at")
+      .eq("status", "ACTIVE")
+      .order("rank", { ascending: true });
 
-  const { data: completedBooks, error: completedError } = await supabase
-    .from("books")
-    .select("id, title, author, category, rank, status, completed_at")
-    .eq("status", "COMPLETED")
-    .order("completed_at", { ascending: false });
+    const { data: completedData, error: completedError } = await supabase
+      .from("books")
+      .select("id, title, author, category, rank, status, completed_at")
+      .eq("status", "COMPLETED")
+      .order("completed_at", { ascending: false });
 
-  if (activeError) {
-    throw new Error(activeError.message);
-  }
+    if (activeError) {
+      throw new Error(activeError.message);
+    }
 
-  if (completedError) {
-    throw new Error(completedError.message);
+    if (completedError) {
+      throw new Error(completedError.message);
+    }
+
+    activeBooks = activeData ?? [];
+    completedBooks = completedData ?? [];
   }
 
   return (
@@ -46,18 +67,37 @@ export default async function HomePage() {
               <Badge variant="secondary">MVP</Badge>
             </div>
 
-            <LogoutButton />
+            {user ? (
+              <LogoutButton />
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/login">Log in</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/signup">Sign up</Link>
+                </Button>
+              </div>
+            )}
           </div>
 
           <p className="text-sm text-muted-foreground">
             Rank your books. Finish one at a time.
           </p>
+
+          {!user ? (
+            <CardDescription className="rounded-md border border-dashed px-3 py-2 text-xs">
+              Guest mode is active. You can try adding, ranking, and completing
+              books here, but nothing will be saved unless you sign up.
+            </CardDescription>
+          ) : null}
         </CardHeader>
 
         <CardContent className="space-y-6">
           <Books
-            activeBooks={activeBooks ?? []}
-            completedBooks={completedBooks ?? []}
+            activeBooks={activeBooks}
+            completedBooks={completedBooks}
+            isGuest={!user}
           />
         </CardContent>
       </Card>

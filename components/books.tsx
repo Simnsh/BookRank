@@ -40,6 +40,7 @@ type Book = {
 type BooksProps = {
   activeBooks: Book[];
   completedBooks: Book[];
+  isGuest?: boolean;
 };
 
 type SortableBookItemProps = {
@@ -97,11 +98,17 @@ function SortableBookItem({ book, onComplete }: SortableBookItemProps) {
   );
 }
 
-export default function Books({ activeBooks, completedBooks }: BooksProps) {
+export default function Books({
+  activeBooks,
+  completedBooks,
+  isGuest = false,
+}: BooksProps) {
   const router = useRouter();
   const supabase = createClient();
 
   const [localActiveBooks, setLocalActiveBooks] = useState<Book[]>(activeBooks);
+  const [localCompletedBooks, setLocalCompletedBooks] =
+    useState<Book[]>(completedBooks);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [category, setCategory] = useState("");
@@ -110,6 +117,10 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
   useEffect(() => {
     setLocalActiveBooks(activeBooks);
   }, [activeBooks]);
+
+  useEffect(() => {
+    setLocalCompletedBooks(completedBooks);
+  }, [completedBooks]);
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -136,6 +147,10 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
     );
 
     setLocalActiveBooks(reorderedBooks);
+
+    if (isGuest) {
+      return;
+    }
 
     // Step 1: move all active ranks temporarily out of the way
     for (let i = 0; i < reorderedBooks.length; i++) {
@@ -187,6 +202,26 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
         ? 1
         : Math.max(...localActiveBooks.map((b) => b.rank)) + 1;
 
+    if (isGuest) {
+      setLocalActiveBooks((currentBooks) => [
+        ...currentBooks,
+        {
+          id: crypto.randomUUID(),
+          title: trimmedTitle,
+          author: trimmedAuthor,
+          category: trimmedCategory || null,
+          rank: nextRank,
+          status: "ACTIVE",
+          completed_at: null,
+        },
+      ]);
+      setTitle("");
+      setAuthor("");
+      setCategory("");
+      setIsOpen(false);
+      return;
+    }
+
     const {
       data: { user },
       error: userError,
@@ -229,6 +264,27 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
         return;
       }
 
+      if (isGuest) {
+        const completedAt = new Date().toISOString();
+        const remainingBooks = localActiveBooks
+          .filter((book) => book.id !== bookId)
+          .map((book, index) => ({
+            ...book,
+            rank: index + 1,
+          }));
+
+        setLocalActiveBooks(remainingBooks);
+        setLocalCompletedBooks((currentBooks) => [
+          {
+            ...bookToComplete,
+            status: "COMPLETED",
+            completed_at: completedAt,
+          },
+          ...currentBooks,
+        ]);
+        return;
+      }
+
       const completedRank = bookToComplete.rank;
 
       const { error: completeError } = await supabase
@@ -264,6 +320,29 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
         localActiveBooks.length === 0
           ? 1
           : Math.max(...localActiveBooks.map((b) => b.rank)) + 1;
+
+      if (isGuest) {
+        const bookToRestore = localCompletedBooks.find((book) => book.id === bookId);
+
+        if (!bookToRestore) {
+          alert("Book not found.");
+          return;
+        }
+
+        setLocalCompletedBooks((currentBooks) =>
+          currentBooks.filter((book) => book.id !== bookId),
+        );
+        setLocalActiveBooks((currentBooks) => [
+          ...currentBooks,
+          {
+            ...bookToRestore,
+            rank: restoredRank,
+            status: "ACTIVE",
+            completed_at: null,
+          },
+        ]);
+        return;
+      }
 
       const { error } = await supabase
         .from("books")
@@ -388,6 +467,13 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
       return;
     }
 
+    if (isGuest) {
+      setLocalCompletedBooks((currentBooks) =>
+        currentBooks.filter((book) => book.id !== bookId),
+      );
+      return;
+    }
+
     const { error } = await supabase.from("books").delete().eq("id", bookId);
 
     if (error) {
@@ -484,12 +570,12 @@ export default function Books({ activeBooks, completedBooks }: BooksProps) {
           Completed
         </h2>
 
-        {completedBooks.length === 0 ? (
+        {localCompletedBooks.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No completed books yet.
           </p>
         ) : (
-          completedBooks.map((book) => (
+          localCompletedBooks.map((book) => (
             <div
               key={book.id}
               className="flex items-center gap-3 rounded-md border p-3 opacity-80"
