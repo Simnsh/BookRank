@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -87,6 +88,13 @@ export default function SignupPage() {
             <Button type="submit" className="w-full">
               Sign up
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="underline underline-offset-4">
+                Log in
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
