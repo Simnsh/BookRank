@@ -124,3 +124,46 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes guest-add-cta {
+  0%,
+  72%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+  }
+
+  8% {
+    transform: translate3d(0, -1px, 0) scale(1.01);
+  }
+
+  16% {
+    transform: translate3d(-3px, 0, 0) scale(1.01);
+  }
+
+  24% {
+    transform: translate3d(3px, 0, 0) scale(1.01);
+  }
+
+  32% {
+    transform: translate3d(-2px, 0, 0) scale(1.01);
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--primary) 16%, transparent);
+  }
+
+  40% {
+    transform: translate3d(2px, 0, 0) scale(1.01);
+  }
+
+  48% {
+    transform: translate3d(0, 0, 0) scale(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+  }
+}
+
+@utility animate-guest-add-cta {
+  animation: guest-add-cta 2.6s ease-in-out infinite;
+}
+
+@utility guest-add-cta {
+  transform-origin: center;
+}

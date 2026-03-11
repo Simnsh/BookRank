@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -113,6 +114,7 @@ export default function Books({
   const [author, setAuthor] = useState("");
   const [category, setCategory] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const shouldHighlightAddButton = isGuest && localActiveBooks.length === 0;
 
   useEffect(() => {
     setLocalActiveBooks(activeBooks);
@@ -488,9 +490,27 @@ export default function Books({
     <>
       <div className="space-y-4">
         {localActiveBooks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No active books yet. Add your first book.
-          </p>
+          isGuest ? (
+            <div className="rounded-lg border border-dashed p-4">
+              <p className="text-sm font-medium">Start your first reading stack</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add a book to try the product. Create an account to save your
+                list across sessions.
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <Button asChild size="sm">
+                  <Link href="/signup">Sign up to save progress</Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/login">Log in</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No active books yet. Add your first book.
+            </p>
+          )
         ) : (
           <DndContext
             collisionDetection={closestCenter}
@@ -516,7 +536,11 @@ export default function Books({
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full">Add a book</Button>
+          <Button
+            className={`w-full ${shouldHighlightAddButton ? "guest-add-cta motion-safe:animate-guest-add-cta" : ""}`}
+          >
+            Add a book
+          </Button>
         </DialogTrigger>
 
         <DialogContent>

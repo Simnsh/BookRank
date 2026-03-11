@@ -86,10 +86,21 @@ export default async function HomePage() {
           </p>
 
           {!user ? (
-            <CardDescription className="rounded-md border border-dashed px-3 py-2 text-xs">
-              Guest mode is active. You can try adding, ranking, and completing
-              books here, but nothing will be saved unless you sign up.
-            </CardDescription>
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="font-medium">Guest mode is active</p>
+                  <CardDescription className="text-xs text-amber-900">
+                    Try adding, ranking, and completing books now. Your list
+                    will disappear when you leave unless you create an account.
+                  </CardDescription>
+                </div>
+
+                <Button asChild size="sm">
+                  <Link href="/signup">Save my list</Link>
+                </Button>
+              </div>
+            </div>
           ) : null}
         </CardHeader>
 
