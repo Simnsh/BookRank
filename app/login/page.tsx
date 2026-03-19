@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -64,7 +67,8 @@ export default function LoginPage() {
     setInfoMessage("");
     setIsSendingReset(true);
 
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const redirectBaseUrl = appUrl || window.location.origin;
+    const redirectTo = `${redirectBaseUrl}/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo,
     });
