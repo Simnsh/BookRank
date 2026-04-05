@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -107,6 +108,7 @@ export default function Books({
   const router = useRouter();
   const supabase = createClient();
 
+  const guestDragHintStorageKey = "bookstack-guest-drag-hint-dismissed";
   const [localActiveBooks, setLocalActiveBooks] = useState<Book[]>(activeBooks);
   const [localCompletedBooks, setLocalCompletedBooks] =
     useState<Book[]>(completedBooks);
@@ -114,6 +116,7 @@ export default function Books({
   const [author, setAuthor] = useState("");
   const [category, setCategory] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isDragHintOpen, setIsDragHintOpen] = useState(false);
   const shouldHighlightAddButton = isGuest && localActiveBooks.length === 0;
 
   useEffect(() => {
@@ -123,6 +126,25 @@ export default function Books({
   useEffect(() => {
     setLocalCompletedBooks(completedBooks);
   }, [completedBooks]);
+
+  useEffect(() => {
+    if (!isGuest || localActiveBooks.length < 2) {
+      return;
+    }
+
+    const hasDismissedHint = window.localStorage.getItem(
+      guestDragHintStorageKey,
+    );
+
+    if (!hasDismissedHint) {
+      setIsDragHintOpen(true);
+    }
+  }, [isGuest, localActiveBooks.length]);
+
+  function handleCloseDragHint() {
+    window.localStorage.setItem(guestDragHintStorageKey, "true");
+    setIsDragHintOpen(false);
+  }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -488,6 +510,40 @@ export default function Books({
 
   return (
     <>
+      <Dialog
+        open={isDragHintOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseDragHint();
+            return;
+          }
+
+          setIsDragHintOpen(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tip: drag the number to reorder</DialogTitle>
+            <DialogDescription>
+              You can rank your books by dragging the number on the left side of
+              each row. Move a book up or down to change its priority.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+            Example: drag <span className="font-semibold text-foreground">2</span>{" "}
+            above <span className="font-semibold text-foreground">1</span> to
+            make it your top book.
+          </div>
+
+          <DialogFooter>
+            <Button type="button" onClick={handleCloseDragHint}>
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-4">
         {localActiveBooks.length === 0 ? (
           isGuest ? (
